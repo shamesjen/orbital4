@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"context"
 	api "hello/kitex_gen/api"
 )
@@ -10,5 +12,7 @@ type EchoImpl struct{}
 
 // Call implements the EchoImpl interface.
 func (s *EchoImpl) Call(ctx context.Context, req *api.Request) (resp *api.Response, err error) {
-	return &api.Response{Message: req.Message}, nil
+	fmt.Println(resp)
+	fmt.Println(req)
+	return &api.Response{Message: "hello, hong wei"}, nil
 }

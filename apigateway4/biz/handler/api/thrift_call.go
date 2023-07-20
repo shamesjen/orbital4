@@ -22,7 +22,7 @@ import (
 func Call(ctx context.Context, c *app.RequestContext) {
 	//url to sendreq?
 	var requestURL string = "http://example.com/life/client/11?vint64=1&items=item0,item1,item2"
-	var IDLPATH string = "/Users/james/Documents/GitHub/apigateway4/idl/hello.thrift"
+	var IDLPATH string = "idl/hello.thrift"
 	var jsonData map[string]interface{}
 
 	//return data in bytes
@@ -37,8 +37,14 @@ func Call(ctx context.Context, c *app.RequestContext) {
 	}
 
 	//wtv key value ned be consistet
-	dataValue, ok := jsonData["text"].(string)
-
+	dataValue, ok := jsonData["message"].(string)
+	if !ok {
+		c.String(consts.StatusBadRequest, "data provided not a string")
+		return
+	}
+	
+	jsonData["message"] = dataValue
+	fmt.Println(jsonData)
 	fmt.Println("message is " + dataValue)
 
 	if !ok {
@@ -48,7 +54,8 @@ func Call(ctx context.Context, c *app.RequestContext) {
 
 	//working until here
 
-	responseFromRPC, err := makeThriftCall(IDLPATH, response, requestURL, ctx, dataValue)
+	responseFromRPC, err := makeThriftCall(IDLPATH, jsonData, requestURL, ctx, dataValue)
+
 
 	if err != nil {
 		fmt.Println(err)
@@ -58,10 +65,16 @@ func Call(ctx context.Context, c *app.RequestContext) {
 
 	fmt.Println("Post request successful")
 
+	// strResponse, ok := responseFromRPC.(string)
+	// if !ok {
+	// fmt.Println("responseFromRPC is not a string")
+	// return
+	// }
+	
 	c.JSON(consts.StatusOK, responseFromRPC)
 }
 
-func makeThriftCall(IDLPath string, response []byte, requestURL string, ctx context.Context, dataValue string) (interface{}, error) {
+func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL string, ctx context.Context, dataValue string) (interface{}, error) {
 	p, err := generic.NewThriftFileProvider(IDLPath)
 	if err != nil {
 		fmt.Println("error creating thrift file provider")
@@ -85,8 +98,17 @@ func makeThriftCall(IDLPath string, response []byte, requestURL string, ctx cont
 	// 	fmt.Println("error construting req")
 	// 	return 0, err
 	// }
+	// Remove this part:
+	// err1 := json.Unmarshal(response, &jsonData)
+
+	// Directly marshal jsonData into a string for the RPC call:
+
 	req := api.NewRequest()
 	req.Message = dataValue
+	fmt.Println(jsonData)
+	jsonString, _ := json.Marshal(jsonData)
+	
+
 	// customReq, err := generic.FromHTTPRequest(req)
 
 	// if err != nil {
@@ -96,7 +118,7 @@ func makeThriftCall(IDLPath string, response []byte, requestURL string, ctx cont
 
 	// fmt.Println(customReq)
 
-	resp, err := cli.GenericCall(ctx, "call", dataValue)
+	resp, err := cli.GenericCall(ctx, "call", string(jsonString))
 
 	fmt.Println("generic call successful")
 	fmt.Println(resp)
@@ -106,7 +128,60 @@ func makeThriftCall(IDLPath string, response []byte, requestURL string, ctx cont
 		return 0, err
 	}
 
-	realResp := resp
 
-	return realResp, nil
+	respString, ok := resp.(string)
+	if !ok {
+		fmt.Println("resp is not a string. Actual value:", resp)
+		return nil, errors.New("resp is not a string")
+	}
+
+	fmt.Println("generic call successful:", respString)
+
+	var respData map[string]interface{}
+	err = json.Unmarshal([]byte(respString), &respData)
+	if err != nil {
+		fmt.Println("error unmarshalling response", err)
+		return nil, err
+	}
+
+	fmt.Println("Received message:", respData["Msg"])
+	fmt.Println("Additional data:", respData["AdditionalData"])
+
+	return respData, nil
+
 }
+	// resp should be a JSON string. Unmarshal it into a map.
+// 	var respData map[string]interface{}
+// 	err = json.Unmarshal([]byte(resp.(string)), &respData)
+// 	if err != nil {
+// 		fmt.Println("oh no")
+// 	}
+
+// 	fmt.Println("Received message:", respData["Msg"])
+// 	fmt.Println("Additional data:", respData["AdditionalData"])
+
+// 	return respData, nil
+// }
+
+	// respString := resp.(string)
+	// var respData map[string]interface{}
+	// err = json.Unmarshal([]byte(respString), &respData)
+	// if err != nil {
+	// 	fmt.Println("error unmarshalling response", err)
+	// 	return 0, err
+	// }
+	// respMap, ok := resp.(map[string]interface{})
+	// if !ok {
+	// 	// handle error, resp is not a map
+	// }
+
+	// fmt.Println("Received message:", respMap["Msg"])
+	// fmt.Println("Additional data:", respMap["AdditionalData"])
+
+// 	fmt.Println("Received message:", respData["Msg"])
+// 	fmt.Println("Additional data:", respData["AdditionalData"])
+
+// 	return resp, nil
+// }
+
+
