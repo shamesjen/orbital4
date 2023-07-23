@@ -8,8 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	api "hello/biz/model/api"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/kitex/client"
@@ -35,26 +33,10 @@ func Call(ctx context.Context, c *app.RequestContext) {
 		c.String(consts.StatusBadRequest, "bad post request")
 		return
 	}
-
-	//wtv key value ned be consistet
-	dataValue, ok := jsonData["message"].(string)
-	if !ok {
-		c.String(consts.StatusBadRequest, "data provided not a string")
-		return
-	}
 	
-	jsonData["message"] = dataValue
 	fmt.Println(jsonData)
-	fmt.Println("message is " + dataValue)
 
-	if !ok {
-		c.String(consts.StatusBadRequest, "data provided not a string")
-		return
-	}
-
-	//working until here
-
-	responseFromRPC, err := makeThriftCall(IDLPATH, jsonData, requestURL, ctx, dataValue)
+	responseFromRPC, err := makeThriftCall(IDLPATH, jsonData, requestURL, ctx)
 
 
 	if err != nil {
@@ -64,23 +46,17 @@ func Call(ctx context.Context, c *app.RequestContext) {
 	}
 
 	fmt.Println("Post request successful")
-
-	// strResponse, ok := responseFromRPC.(string)
-	// if !ok {
-	// fmt.Println("responseFromRPC is not a string")
-	// return
-	// }
 	
 	c.JSON(consts.StatusOK, responseFromRPC)
 }
 
-func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL string, ctx context.Context, dataValue string) (interface{}, error) {
+func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL string, ctx context.Context) (interface{}, error) {
 	p, err := generic.NewThriftFileProvider(IDLPath)
 	if err != nil {
 		fmt.Println("error creating thrift file provider")
 		return 0, err
 	}
-	fmt.Println(dataValue)
+	
 	g, err := generic.JSONThriftGeneric(p)
 	if err != nil {
 		return 0, errors.New(("error creating thrift generic"))
@@ -98,17 +74,9 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 	// 	fmt.Println("error construting req")
 	// 	return 0, err
 	// }
-	// Remove this part:
-	// err1 := json.Unmarshal(response, &jsonData)
 
-	// Directly marshal jsonData into a string for the RPC call:
-
-	req := api.NewRequest()
-	req.Message = dataValue
-	fmt.Println(jsonData)
 	jsonString, _ := json.Marshal(jsonData)
 	
-
 	// customReq, err := generic.FromHTTPRequest(req)
 
 	// if err != nil {
@@ -120,14 +88,10 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 
 	resp, err := cli.GenericCall(ctx, "call", string(jsonString))
 
-	fmt.Println("generic call successful")
-	fmt.Println(resp)
-
 	if err != nil {
 		fmt.Println("error making generic call")
 		return 0, err
 	}
-
 
 	respString, ok := resp.(string)
 	if !ok {
@@ -144,44 +108,10 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 		return nil, err
 	}
 
-	fmt.Println("Received message:", respData["Msg"])
-	fmt.Println("Additional data:", respData["AdditionalData"])
+	fmt.Println("response:", respData["message"])
 
 	return respData, nil
-
 }
-	// resp should be a JSON string. Unmarshal it into a map.
-// 	var respData map[string]interface{}
-// 	err = json.Unmarshal([]byte(resp.(string)), &respData)
-// 	if err != nil {
-// 		fmt.Println("oh no")
-// 	}
 
-// 	fmt.Println("Received message:", respData["Msg"])
-// 	fmt.Println("Additional data:", respData["AdditionalData"])
-
-// 	return respData, nil
-// }
-
-	// respString := resp.(string)
-	// var respData map[string]interface{}
-	// err = json.Unmarshal([]byte(respString), &respData)
-	// if err != nil {
-	// 	fmt.Println("error unmarshalling response", err)
-	// 	return 0, err
-	// }
-	// respMap, ok := resp.(map[string]interface{})
-	// if !ok {
-	// 	// handle error, resp is not a map
-	// }
-
-	// fmt.Println("Received message:", respMap["Msg"])
-	// fmt.Println("Additional data:", respMap["AdditionalData"])
-
-// 	fmt.Println("Received message:", respData["Msg"])
-// 	fmt.Println("Additional data:", respData["AdditionalData"])
-
-// 	return resp, nil
-// }
 
 

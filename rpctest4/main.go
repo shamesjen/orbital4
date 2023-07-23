@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"hello/kitex_gen/api"
-
-	//echo "hello/kitex_gen/api/echo"
 
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/server/genericserver"
@@ -42,32 +39,36 @@ type GenericServiceImpl struct {
 func (g *GenericServiceImpl) GenericCall(ctx context.Context, method string, request interface{}) (response interface{}, err error) {
     m := request.(string)
     var jsonRequest map[string]interface{}
-    json.Unmarshal([]byte(m), &jsonRequest)
+
+    err = json.Unmarshal([]byte(m), &jsonRequest)
+    if err != nil {
+		fmt.Println("Error", err)
+		return
+	}
+
     fmt.Println(m)
-    req := api.NewRequest()
-    message, ok := jsonRequest["message"].(string) // use "message" here
-    if ok {
-        req.Message = message
-    }
-    fmt.Println(req.Message)
+    fmt.Println(jsonRequest)
+
+    dataValue, ok := jsonRequest["message"].(string)
+	if !ok {
+		fmt.Println("data provided is not a string")
+		return
+	}
+    fmt.Println(dataValue)
+
+    jsonRequest["message"] = "Hello!, " + dataValue
 
     
-    respMap := map[string]interface{}{
-        "Msg":            req.Message,
-        "AdditionalData": "Hongwei",
-    }
-    jsonResponse, err := json.Marshal(respMap)
+    // var respMap map[string]interface{}
+    
+    jsonResponse, err := json.Marshal(jsonRequest)
     if err != nil {
         return nil, err
     }
-    fmt.Println(string(jsonResponse))
-    fmt.Println(respMap)
 
-    // resp := map[string]interface{}{
-    //     "Msg":            req.Message,
-    //     "AdditionalData": "Hongwei",
-    // }
-    // return resp, nil
+
+    fmt.Println(string(jsonResponse))
+    // fmt.Println(respMap)
 
     return string(jsonResponse), nil
 }
