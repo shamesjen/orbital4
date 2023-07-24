@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net"
 
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
@@ -23,15 +25,33 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	r, err := etcd.NewEtcdRegistryWithAuth([]string{"127.0.0.1:2379"}, "genericClient", "password")
+	fmt.Println("test1")
+	r, err := etcd.NewEtcdRegistry([]string{"etcd:2379"})
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create etcd registry: %v", err)
 	}
-	svr := genericserver.NewServer(new(GenericServiceImpl), g, server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "Call"}), server.WithRegistry(r))
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("test")
+	// svr := genericserver.NewServer(new(GenericServiceImpl), g, server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "Call"}), server.WithRegistry(r))
+	// if err != nil {
+	// 	panic(err)
+	// }
+    addr, err := net.ResolveTCPAddr("tcp", "server:8888")
+    if err != nil {
+        log.Fatalf("Failed to resolve server address: %v", err)
+    }
 
+    svr := genericserver.NewServer(
+        new(GenericServiceImpl), 
+        g, 
+		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "Call"}),
+        server.WithServiceAddr(addr), 
+        server.WithRegistry(r),
+    )
+
+    if err != nil {
+        panic(err)
+    }
+	
 	err = svr.Run()
 	if err != nil {
 		panic(err)
