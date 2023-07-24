@@ -6,7 +6,10 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/kitex/pkg/generic"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/server/genericserver"
+	etcd "github.com/kitex-contrib/registry-etcd"
 )
 
 func main() {
@@ -20,8 +23,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	svr := genericserver.NewServer(new(GenericServiceImpl), g)
+	r, err := etcd.NewEtcdRegistry([]string{"127.0.0.1:2379"})
+	if err != nil {
+		panic(err)
+	}
+	svr := genericserver.NewServer(new(GenericServiceImpl), g, server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "Call"}), server.WithRegistry(r))
 	if err != nil {
 		panic(err)
 	}
@@ -37,38 +43,36 @@ type GenericServiceImpl struct {
 }
 
 func (g *GenericServiceImpl) GenericCall(ctx context.Context, method string, request interface{}) (response interface{}, err error) {
-    m := request.(string)
-    var jsonRequest map[string]interface{}
+	m := request.(string)
+	var jsonRequest map[string]interface{}
 
-    err = json.Unmarshal([]byte(m), &jsonRequest)
-    if err != nil {
+	err = json.Unmarshal([]byte(m), &jsonRequest)
+	if err != nil {
 		fmt.Println("Error", err)
 		return
 	}
 
-    fmt.Println(m)
-    fmt.Println(jsonRequest)
+	fmt.Println(m)
+	fmt.Println(jsonRequest)
 
-    dataValue, ok := jsonRequest["message"].(string)
+	dataValue, ok := jsonRequest["message"].(string)
 	if !ok {
 		fmt.Println("data provided is not a string")
 		return
 	}
-    fmt.Println(dataValue)
+	fmt.Println(dataValue)
 
-    jsonRequest["message"] = "Hello!, " + dataValue
+	jsonRequest["message"] = "Hello!, " + dataValue
 
-    
-    // var respMap map[string]interface{}
-    
-    jsonResponse, err := json.Marshal(jsonRequest)
-    if err != nil {
-        return nil, err
-    }
+	// var respMap map[string]interface{}
 
+	jsonResponse, err := json.Marshal(jsonRequest)
+	if err != nil {
+		return nil, err
+	}
 
-    fmt.Println(string(jsonResponse))
-    // fmt.Println(respMap)
+	fmt.Println(string(jsonResponse))
+	// fmt.Println(respMap)
 
-    return string(jsonResponse), nil
+	return string(jsonResponse), nil
 }

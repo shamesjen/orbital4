@@ -7,12 +7,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+
+	"github.com/cloudwego/kitex/pkg/loadbalance"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
+	etcd "github.com/kitex-contrib/registry-etcd"
 )
 
 // Call .
@@ -33,11 +37,10 @@ func Call(ctx context.Context, c *app.RequestContext) {
 		c.String(consts.StatusBadRequest, "bad post request")
 		return
 	}
-	
+
 	fmt.Println(jsonData)
 
 	responseFromRPC, err := makeThriftCall(IDLPATH, jsonData, requestURL, ctx)
-
 
 	if err != nil {
 		fmt.Println(err)
@@ -46,7 +49,7 @@ func Call(ctx context.Context, c *app.RequestContext) {
 	}
 
 	fmt.Println("Post request successful")
-	
+
 	c.JSON(consts.StatusOK, responseFromRPC)
 }
 
@@ -56,13 +59,18 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 		fmt.Println("error creating thrift file provider")
 		return 0, err
 	}
-	
+
 	g, err := generic.JSONThriftGeneric(p)
 	if err != nil {
 		return 0, errors.New(("error creating thrift generic"))
 	}
 
-	cli, err := genericclient.NewClient("Call", g, client.WithHostPorts("0.0.0.0:8888"))
+	r, err := etcd.NewEtcdResolver([]string{"127.0.0.1:2379"})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cli, err := genericclient.NewClient("Call", g, client.WithResolver(r), client.WithLoadBalancer(loadbalance.NewWeightedRoundRobinBalancer()))
 
 	if err != nil {
 		return 0, errors.New(("invalid client name"))
@@ -76,7 +84,7 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 	// }
 
 	jsonString, _ := json.Marshal(jsonData)
-	
+
 	// customReq, err := generic.FromHTTPRequest(req)
 
 	// if err != nil {
@@ -112,6 +120,3 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 
 	return respData, nil
 }
-
-
-
