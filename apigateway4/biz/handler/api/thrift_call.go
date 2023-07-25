@@ -65,7 +65,7 @@ func makeThriftCall(IDLPath string, jsonData map[string]interface{}, requestURL 
 		return 0, errors.New(("error creating thrift generic"))
 	}
 
-	r, err := etcd.NewEtcdResolverWithAuth([]string{"127.0.0.1:2379"}, "genericClient", "hello")
+	r, err := etcd.NewEtcdResolver([]string{"etcd:2379"})
 	if err != nil {
 		log.Fatal(err)
 	}
